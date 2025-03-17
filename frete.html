@@ -6,17 +6,21 @@
     <title>Teste de Frete</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <style>
+        /* Garantindo que os editores tenham tamanho visível */
+        #editor-entrada, #editor-saida {
+            width: 100%;
+            height: 130px; /* Define uma altura mínima para aparecer */
+            border: 1px solid #ccc; /* Adiciona uma borda para melhor visualização */
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Cabeçalho -->
     <header>
-        <!-- Logo -->
         <div class="logo">
-            <img src="logo.png" alt="Logo"></a>
+            <img src="logo.png" alt="Logo">
         </div>
-
-        <!-- Botões de navegação -->
         <nav>
             <button><a href="order.html" class="link" target="_self">Monitoramento de Pedidos</a></button>
             <button><a href="frete.html" class="link" target="_self">Teste de Frete</a></button>
@@ -24,35 +28,68 @@
             <button class="button"><a href="https://www.panvel.com/panvel/ofertas/panvel-infinita/1680" class="link" target="_blank">Marketplace</a></button>
         </nav>
     </header>
-<br>
+    <br>
 
     <h2>Teste de Frete</h2>
-    
-    <div id="editor">{
-        "SKU Front": "",
-        "Seller (HFZZ)": "",
-        "CEP Destino": ""
+
+    <!-- Caixa de entrada JSON -->
+    <h3>Dados de Entrada:</h3>
+    <div id="editor-entrada">{
+        "SKU Front": "digite aqui o sku fron do produto",
+        "Seller (HFZZ)": "digite aqui o tenant do seller que deseja testar",
+        "CEP Destino": "digite o codigo postal do destino mas sem o hifen"
     }</div>
 
     <button onclick="processarJSON()">Enviar</button>
 
-    <h3>Resultado:</h3>
-    <pre id="output"></pre>
+    <!-- Caixa de saída JSON -->
+    <h3>Resultado da Requisição:</h3>
+    <div id="editor-saida">{}</div>
 
     <script>
-        // Inicializa o editor Ace
-        var editor = ace.edit("editor");
-        editor.setTheme("ace/theme/monokai");
-        editor.session.setMode("ace/mode/json");
-        editor.setOptions({ fontSize: "16px", tabSize: 2 });
+        // Inicializa os editores Ace
+        var editorEntrada = ace.edit("editor-entrada");
+        editorEntrada.setTheme("ace/theme/monokai");
+        editorEntrada.session.setMode("ace/mode/json");
+        editorEntrada.setOptions({ fontSize: "16px", tabSize: 2 });
+
+        var editorSaida = ace.edit("editor-saida");
+        editorSaida.setTheme("ace/theme/monokai");
+        editorSaida.session.setMode("ace/mode/json");
+        editorSaida.setOptions({ fontSize: "16px", tabSize: 2, readOnly: true });
 
         function processarJSON() {
             try {
-                var jsonTexto = editor.getValue();
+                var jsonTexto = editorEntrada.getValue();
                 var jsonData = JSON.parse(jsonTexto); // Converte para JSON
-                document.getElementById("output").textContent = JSON.stringify(jsonData, null, 2);
+
+                // Criando um objeto com as chaves corretas para o Flask
+                var body = {
+                    "SKU Front": jsonData["SKU Front"],
+                    "Seller (HFZZ)": jsonData["Seller (HFZZ)"],
+                    "CEP Destino": jsonData["CEP Destino"]
+                };
+
+                // Enviando para o servidor Flask
+                fetch("http://127.0.0.1:5000/frete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body) // Enviando JSON corretamente
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        editorSaida.setValue(JSON.stringify({ "Erro": data.error }, null, 2));
+                    } else {
+                        editorSaida.setValue(JSON.stringify(data, null, 2));
+                    }
+                })
+                .catch(error => {
+                    editorSaida.setValue(JSON.stringify({ "Erro de conexão": error }, null, 2));
+                });
+
             } catch (error) {
-                document.getElementById("output").textContent = "Erro de JSON: " + error.message;
+                editorSaida.setValue(JSON.stringify({ "Erro de JSON": error.message }, null, 2));
             }
         }
     </script>
